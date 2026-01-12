@@ -15,7 +15,7 @@ For filters, pagination, tabs, and any state that should be bookmarkable/shareab
 | Context | API |
 |---------|-----|
 | Load Function (Server) | `url.searchParams.get()` |
-| Components (Client) | `$page.url.searchParams` |
+| Components (Client) | `page.url.searchParams` (from `$app/state`) |
 
 **Benefits:**
 - Deep linking support

@@ -2,6 +2,9 @@
 
 Patterns for type-safe URL state management using **native SvelteKit APIs**.
 
+> [!NOTE]
+> SvelteKit 5.1+ 부터 `$app/state`가 도입되었습니다. 기존 `$app/stores`도 호환되지만, Svelte 5 Runes와 함께 사용할 때는 `$app/state`가 더 자연스럽습니다.
+
 ---
 
 ## Server-Side Access
@@ -26,23 +29,23 @@ export async function load({ url }) {
 
 ---
 
-## Client-Side Access
+## Client-Side Access (Svelte 5)
 
-Use `$page` store from `$app/stores`.
+Use `page` from `$app/state` with `$derived` for reactive URL state.
 
 ```svelte
 <!-- src/routes/search/+page.svelte -->
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { goto } from '$app/navigation';
   
   let { data } = $props();
   
-  // Read from URL
-  $: q = $page.url.searchParams.get('q') || '';
+  // ✅ Svelte 5: $derived for reactive values
+  const q = $derived(page.url.searchParams.get('q') || '');
   
   function updateSearch(newQuery: string) {
-    const url = new URL($page.url);
+    const url = new URL(page.url);
     url.searchParams.set('q', newQuery);
     goto(url, { keepFocus: true, noScroll: true });
   }
@@ -63,29 +66,39 @@ Create a helper function for common URL manipulation patterns.
 ```typescript
 // src/lib/utils/url.ts
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
-import { get } from 'svelte/store';
 
-export function updateSearchParam(key: string, value: string | null) {
-  const url = new URL(get(page).url);
+/**
+ * URL 파라미터를 패치하고 navigation을 수행합니다.
+ * @param currentUrl - 현재 URL ($app/state의 page.url)
+ * @param params - 설정할 파라미터 (null이면 삭제)
+ */
+export function patchUrlParams(
+  currentUrl: URL,
+  params: Record<string, string | null>
+) {
+  const url = new URL(currentUrl);
   
-  if (value === null || value === '') {
-    url.searchParams.delete(key);
-  } else {
-    url.searchParams.set(key, value);
-  }
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === '') {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(key, value);
+    }
+  });
   
   goto(url, { keepFocus: true, noScroll: true, replaceState: true });
 }
 ```
 
-Usage:
+Usage in component:
+
 ```svelte
-<script>
-  import { updateSearchParam } from '$lib/utils/url';
+<script lang="ts">
+  import { page } from '$app/state';
+  import { patchUrlParams } from '$lib/utils/url';
 </script>
 
-<button onclick={() => updateSearchParam('page', '2')}>
+<button onclick={() => patchUrlParams(page.url, { page: '2' })}>
   Page 2
 </button>
 ```
@@ -94,22 +107,26 @@ Usage:
 
 ## Type-Safe Params (Advanced)
 
-For type-safe URL params, create a typed helper.
+For type-safe URL params, create a typed helper using `$derived`.
 
-```typescript
-// src/lib/features/search/params.ts
-import { page } from '$app/stores';
-import { derived } from 'svelte/store';
+```svelte
+<!-- Usage in component -->
+<script lang="ts">
+  import { page } from '$app/state';
 
-export interface SearchParams {
-  q: string;
-  page: number;
-  sort: 'asc' | 'desc';
-}
+  interface SearchParams {
+    q: string;
+    page: number;
+    sort: 'asc' | 'desc';
+  }
 
-export const searchParams = derived(page, ($page) => ({
-  q: $page.url.searchParams.get('q') || '',
-  page: Number($page.url.searchParams.get('page')) || 1,
-  sort: ($page.url.searchParams.get('sort') as 'asc' | 'desc') || 'desc'
-}));
+  // ✅ Type-safe derived params
+  const searchParams = $derived<SearchParams>({
+    q: page.url.searchParams.get('q') || '',
+    page: Number(page.url.searchParams.get('page')) || 1,
+    sort: (page.url.searchParams.get('sort') as 'asc' | 'desc') || 'desc'
+  });
+</script>
+
+<p>Searching for: {searchParams.q}</p>
 ```

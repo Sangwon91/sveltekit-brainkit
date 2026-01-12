@@ -21,7 +21,7 @@ Complete checklist for Frontend Architecture compliance in SvelteKit v5.
 - **Do** use `Zod` or similar validation in Form Actions.
 
 ### State
-- **Do** use native URL APIs (`$page.url`, `goto`) for shareable state.
+- **Do** use native URL APIs (`page.url` from `$app/state`, `goto`) for shareable state.
 - **Do** use `$state()` Runes for local component state.
 - **Do** use `$derived()` for computed values.
 
