@@ -10,16 +10,16 @@ Contains reusable UI components for the feature.
 
 - **Role:** View/Presentation logic.
 - **Context:** Runs on both Server (SSR) and Client (Hydration).
-- **State:** Use props for data, or `logic.svelte.ts` for complex local state.
+- **State:** Use props for data, or `state.svelte.ts` for complex local state.
 
 ```svelte
 <!-- src/lib/features/dashboard/components/DashboardView.svelte -->
 <script lang="ts">
   import type { DashboardData } from '../types';
-  import { DashboardState } from '../logic.svelte';
+  import { createDashboardState } from '../state.svelte';
 
   let { data }: { data: DashboardData } = $props();
-  const state = new DashboardState();
+  const state = createDashboardState();
 </script>
 
 <div>
@@ -60,10 +60,10 @@ SvelteKit uses `load` functions in `+page.server.ts` as the bridge between URL/R
 
 ```typescript
 // src/routes/dashboard/+page.server.ts
-import { dashboardApi } from '$lib/features/dashboard/server';
+import { getDashboardData } from '$lib/features/dashboard/api.server';
 
 export async function load({ locals }) {
-  const data = await dashboardApi.getDashboardData(locals.user.id);
+  const data = await getDashboardData(locals.user.id);
   return { data };
 }
 ```
@@ -76,7 +76,7 @@ SvelteKit uses `actions` in `+page.server.ts` for form submissions and mutations
 
 ```typescript
 // src/routes/dashboard/+page.server.ts
-import { dashboardApi } from '$lib/features/dashboard/server';
+import { updateSettings } from '$lib/features/dashboard/api.server';
 import { fail } from '@sveltejs/kit';
 
 export const actions = {
@@ -84,7 +84,7 @@ export const actions = {
     const data = await request.formData();
     // Validate
     try {
-      await dashboardApi.updateSettings(locals.user.id, data);
+      await updateSettings(locals.user.id, data);
     } catch (e) {
       return fail(400, { error: 'Update failed' });
     }
@@ -94,24 +94,33 @@ export const actions = {
 
 ---
 
-## E. Client Logic & State (`logic.svelte.ts`)
+## E. Client Logic & State (`state.svelte.ts`)
 
 - **Role:** Complex client-side state management using Svelte 5 Runes.
-- **Replaces:** `useState`, `useEffect`, complex stores.
+- **Pattern:** 함수형 (Function-based) - JavaScript 생태계 표준
 
 ```typescript
-// src/lib/features/dashboard/logic.svelte.ts
-export class DashboardState {
-  filter = $state('all');
+// src/lib/features/dashboard/state.svelte.ts
+export function createDashboardState(initialFilter = 'all') {
+  let filter = $state(initialFilter);
+  const label = $derived(`Current filter: ${filter}`);
   
-  // Derived state with Runes
-  label = $derived(`Current filter: ${this.filter}`);
-
-  setFilter(newFilter: string) {
-    this.filter = newFilter;
+  function setFilter(newFilter: string) {
+    filter = newFilter;
   }
+  
+  return {
+    get filter() { return filter; },
+    get label() { return label; },
+    setFilter
+  };
 }
 ```
+
+**왜 함수형인가?**
+- React Hooks, Vue Composition API와 동일한 패턴
+- 인스턴스 관리가 자동 (Class는 `new` 필요)
+- SSR에서 request 간 상태 오염 방지
 
 ---
 

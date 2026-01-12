@@ -30,13 +30,11 @@ src/
 │   ├── utils/                # [Shared Utilities] Pure helpers
 │   │
 │   └── features/             # ★ [Core] The heart of the application.
-│       ├── {feature-name}/   # e.g., 'auth', 'analytics'
-│       │   ├── components/   # UI Components
-│       │   ├── logic.svelte.ts # Client Logic & State (Runes)
-│       │   ├── api.server.ts # Business Logic & DAL (Server-Only)
-│       │   ├── types.ts      # Feature-specific types
-│       │   ├── index.ts      # ★ Client-safe exports
-│       │   └── server.ts     # ★ Server-only exports
+│       └── {feature-name}/   # e.g., 'auth', 'analytics'
+│           ├── components/   # UI Components
+│           ├── state.svelte.ts  # Client Logic & State (Runes)
+│           ├── api.server.ts # Business Logic & DAL (Server-Only)
+│           └── types.ts      # Feature-specific types
 │
 └── app.d.ts                  # Global type definitions
 ```
@@ -53,10 +51,10 @@ src/
 
 ```typescript
 // src/routes/dashboard/+page.server.ts
-import { dashboardApi } from '$lib/features/dashboard/server';
+import { getOverview } from '$lib/features/dashboard/api.server';
 
 export async function load({ locals }) {
-  const data = await dashboardApi.getOverview(locals.user.id);
+  const data = await getOverview(locals.user.id);
   return { data };
 }
 ```
@@ -70,7 +68,7 @@ export async function load({ locals }) {
 ### `src/lib/server/` - Server Infrastructure
 
 - **Purpose:** Database connections, sensitive configuration.
-- **Protection:** SvelteKit prevents importing `$lib/server` modules into client-side code ($lib/server refers to the actual directory convention).
+- **Protection:** SvelteKit prevents importing `$lib/server` modules into client-side code.
 
 ### `src/lib/features/` - Core Business Logic
 

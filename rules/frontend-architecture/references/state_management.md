@@ -10,12 +10,12 @@ Follow this priority order for managing state in SvelteKit v5.
 
 For filters, pagination, tabs, and any state that should be bookmarkable/shareable.
 
-**Use:** `sveltekit-search-params` OR standard `page.url` with `pushState`/`replaceState`.
+**Use:** Native SvelteKit APIs (`$page.url`, `goto`).
 
 | Context | API |
 |---------|-----|
 | Load Function (Server) | `url.searchParams.get()` |
-| Components (Client) | `$page.url.searchParams` or `sveltekit-search-params` stores |
+| Components (Client) | `$page.url.searchParams` |
 
 **Benefits:**
 - Deep linking support
@@ -43,16 +43,27 @@ Data flows one way: `Server (API)` -> `Load Function` -> `Page Prop (data)`.
 
 For complex UI state specific to one feature (e.g. multi-step form wizard, interactive dashboard).
 
-**Use:** Svelte 5 Runes (`$state`, `$derived`, `.svelte.ts` modules).
+**Use:** Svelte 5 Runes (`$state`, `$derived`) in `.svelte.ts` modules with **함수형 패턴**.
 
 ```typescript
-// features/chart/logic.svelte.ts
-export class ChartState {
-  hoverIndex = $state<number | null>(null);
+// features/chart/state.svelte.ts
+export function createChartState(initialData: any[]) {
+  let hoverIndex = $state<number | null>(null);
+  let data = $state(initialData);
   
-  constructor(initialData: any[]) {
-     // ...
+  const activeItem = $derived(
+    hoverIndex !== null ? data[hoverIndex] : null
+  );
+  
+  function setHover(index: number | null) {
+    hoverIndex = index;
   }
+  
+  return {
+    get hoverIndex() { return hoverIndex; },
+    get activeItem() { return activeItem; },
+    setHover
+  };
 }
 ```
 
@@ -63,10 +74,24 @@ export class ChartState {
 Only for truly global, app-wide data (User Session, Theme, Toasts).
 
 **Use:**
-- **Shared Runes:** Create a global singleton instance in a `.svelte.ts` file.
-- **Context API:** `setContext` / `getContext` (less common now with Runes but still useful for component sub-trees).
+- **Shared Runes:** Create a global function in a `.svelte.ts` file.
+- **Context API:** `setContext` / `getContext` for component sub-trees.
 
 ```typescript
 // src/lib/stores/theme.svelte.ts
-export const theme = $state({ current: 'light' });
+function createThemeState() {
+  let current = $state<'light' | 'dark'>('light');
+  
+  function toggle() {
+    current = current === 'light' ? 'dark' : 'light';
+  }
+  
+  return {
+    get current() { return current; },
+    toggle
+  };
+}
+
+// Singleton for global use
+export const theme = createThemeState();
 ```
