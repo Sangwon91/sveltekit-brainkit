@@ -14,7 +14,7 @@ description: "Backend Architecture Rules - Python FastAPI with TDD and Vertical 
 
 ## 2. Core Knowledge (The Cheat Sheet)
 
-- **Workspace**: `uv` monorepo. `apps/` (glue code) vs `packages/` (pure logic).
+- **Workspace**: `uv` monorepo. `apps/` (glue code) vs `domains/` (business logic) vs `packages/` (pure logic).
 - **Architecture**: Vertical Slices. Group by feature, not layer.
 - **Testing**: Test-First is mandatory. Unit tests for packages, Integration tests for apps.
 - **Data**: `SQLModel` for DB entities. Pydantic V2 for DTOs.
@@ -52,7 +52,10 @@ We use `uv` workspaces to support a **Monorepo** structure where the **Main Appl
 ### Workspace Layout Strategy
 
 #### `apps/`
-The Main Server/Application. Contains the **Vertical Slices**, API wiring, and Orchestration logic.
+The Main Server/Application. Contains **thin HTTP adapters**, shared **use cases**, and **infrastructure**.
+
+#### `domains/`
+**Business Domain Logic**. Contains domain types, workflows, and function type Protocols. See `functional-ddd.md` for details.
 
 #### `packages/`
 **Independent Libraries**. Contains *pure* business algorithms, reusable utilities, or complex domain logic that can be isolated from the framework.
@@ -66,28 +69,31 @@ The Main Server/Application. Contains the **Vertical Slices**, API wiring, and O
 backend/
 ├── pyproject.toml              # Workspace root configuration
 ├── uv.lock
+├── domains/                    # [Business Domain]
+│   └── {domain-name}/
+│       ├── types.py            # Value Objects, Entities, Function Types
+│       └── workflows.py        # Pure domain functions
+│
 ├── apps/
-│   └── api/           # [Main Application]
-│       ├── pyproject.toml      # depends on: ["analysis-engine"]
-│       ├── src/
-│       │   └── app/
-│       │       ├── main.py
-│       │       └── features/   # ★ Vertical Slices live HERE (in the app)
-│       │           ├── analysis/
-│       │           │   ├── router.py   # API Endpoint
-│       │           │   ├── service.py  # Orchestration / Flow
-│       │           │   └── schema.py   # DTOs
-│       │           └── ...
-│       └── tests/              # Integration Tests for Slices
+│   ├── api/                    # [Thin HTTP Adapter]
+│   │   ├── pyproject.toml
+│   │   └── src/app/
+│   │       ├── main.py
+│   │       └── features/       # API-specific routing
+│   │           └── {feature}/
+│   │               ├── router.py   # HTTP → UseCase → HTTP
+│   │               └── dtos.py     # Request/Response schemas
+│   ├── usecases/               # [Shared Orchestration]
+│   │   └── {feature}/
+│   │       ├── service.py      # Use Case / Flow
+│   │       └── adapters.py     # Function Type implementations
+│   ├── infrastructure/         # DB, External Services
+│   └── tests/                  # Integration Tests
 │
 └── packages/
-    └── analysis-engine/        # [Library] Pure Logic / Algorithms
+    └── {lib-name}/             # [Pure Algorithms]
         ├── pyproject.toml
-        ├── src/
-        │   └── analysis/
-        │       ├── math.py     # Pure Math/Algorithms
-        │       └── core_domain.py
-        └── tests/              # Unit Tests for Logic
+        └── src/
 ```
 
 ---
@@ -96,20 +102,24 @@ backend/
 
 ### The Slice (Feature)
 
-A "Slice" in `apps/` groups everything needed for a feature.
+A "Slice" groups everything needed for a feature, but is now split across layers:
 
-- **Input**: `schema.py` defines what enters the slice.
-- **Orchestration**: `service.py` coordinates the flow. It calls into `packages/` for heavy lifting.
-- **Data**: `models.py` defines the shape of data.
+- **Domain Types**: `domains/{feature}/types.py` - data structures and function type protocols
+- **Use Case**: `apps/usecases/{feature}/service.py` - orchestration (shared across api, cli, etc.)
+- **API Adapter**: `apps/api/features/{feature}/router.py` - thin HTTP layer
+- **DTOs**: `apps/api/features/{feature}/dtos.py` - API-specific request/response
 
-### Apps vs Packages
+### Layer Responsibilities
 
 | Layer | Role | Contents |
 |-------|------|----------|
-| **Apps** (`apps/*`) | The "Glue". Wiring protocols, managing state, orchestrating calls. | VSA Slices, Routers, Services |
-| **Packages** (`packages/*`) | The "Engine". Pure, testable logic. | Complex algorithms, reusable utilities |
+| **Domains** (`domains/*`) | The "Core". Business types and pure workflows. | Types, Protocols, Pure functions |
+| **Packages** (`packages/*`) | The "Engine". Pure, testable algorithms. | Math, utilities, data sources |
+| **Apps/UseCases** (`apps/usecases/*`) | The "Flow". Shared orchestration. | Services, Adapters |
+| **Apps/API** (`apps/api/*`) | The "Adapter". Thin HTTP layer. | Routers, DTOs |
 
 > [!IMPORTANT]
+> **API is thin**: `router.py` only handles HTTP concerns. Business logic lives in `usecases/`.
 > **Packages Constraint**: No FastAPI dependencies. Pure Python only.
 
 ### Criteria for Package Extraction
