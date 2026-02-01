@@ -162,25 +162,32 @@ Extract code to `packages/` if it is:
 
 - Use **Pydantic V2** for all DTOs.
 
-### Protocol vs ABC
+### Protocol as Function Type
 
-Prefer **Protocols** (Implicit Interfaces) over Abstract Base Classes (Explicit Inheritance) to decouple components.
+Prefer **individual function types** over Repository classes. Each operation = one Protocol.
 
 ```python
-# ✅ GOOD: Protocol (Implicit)
-class Repository(Protocol):
-    def save(self, item: Item) -> None: ...
+# ✅ GOOD: Individual function types (Protocol)
+class GetItemById(Protocol):
+    def __call__(self, id: str) -> Item | None: ...
 
-# ❌ BAD: ABC (Explicit Inheritance coupling)
-class BaseRepository(ABC):
-    @abstractmethod
+class SaveItem(Protocol):
+    def __call__(self, item: Item) -> None: ...
+
+# Usage: inject only what you need
+def some_workflow(get_item: GetItemById):
+    item = get_item("123")
+
+# ❌ BAD: Repository class (couples multiple operations)
+class ItemRepository(Protocol):
+    def get_by_id(self, id: str) -> Item: ...
     def save(self, item: Item) -> None: ...
+    def delete(self, id: str) -> None: ...
 ```
 
 ### Avoid Over-Engineering
 
-- Do not create a `UseCases` folder if a simple function in `service.py` suffices.
-- Do not create `IUnitOfWork` if a simple context manager works.
+- Do not create Repository classes if individual function types suffice.
 
 ---
 

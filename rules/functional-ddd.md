@@ -158,6 +158,29 @@ class FetchPrices(Protocol):
 > **ports.py 분리 불필요**: Protocol도 타입이므로 `types.py`에 통합.
 > 가독성을 위해 Protocol 문법 유지, 개념적으로는 함수 타입으로 취급.
 
+### Repository 대신 개별 함수 타입
+
+Repository 클래스 대신 **개별 함수 타입**을 사용. 필요한 것만 주입.
+
+```python
+# ✅ GOOD: 개별 함수 타입
+class GetTickerById(Protocol):
+    def __call__(self, id: str) -> Ticker | None: ...
+
+class SaveTicker(Protocol):
+    def __call__(self, ticker: Ticker) -> None: ...
+
+# 필요한 함수만 주입
+def some_workflow(get_ticker: GetTickerById):
+    ticker = get_ticker("AAPL")
+
+# ❌ BAD: Repository 클래스 (여러 작업 결합)
+class TickerRepository(Protocol):
+    def get_by_id(self, id: str) -> Ticker: ...
+    def save(self, ticker: Ticker) -> None: ...
+    def delete(self, id: str) -> None: ...
+```
+
 ### Command: Immutable Request Object
 
 ```python
