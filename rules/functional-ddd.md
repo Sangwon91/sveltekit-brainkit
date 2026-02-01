@@ -56,17 +56,15 @@ graph TD
 
 #### `domains/` - 비즈니스 도메인
 
-순수한 도메인 비즈니스 로직. 특정 도메인의 타입, 규칙, 변환 함수를 포함.
+순수한 도메인 비즈니스 로직. **각 도메인은 독립된 패키지**로 관리.
 
 ```text
 domains/
 └── {domain-name}/
-    ├── types.py       # Value Objects, Entities, Function Types (Protocol)
-    └── workflows.py   # Pure domain workflow functions
-
-# 또는 작은 도메인의 경우 단일 파일로:
-domains/
-└── ticker.py          # 타입 + 워크플로우 모두 포함
+    ├── pyproject.toml
+    └── src/{domain_name}/
+        ├── types.py       # Value Objects, Entities, Function Types (Protocol)
+        └── workflows.py   # Pure domain workflow functions
 ```
 
 > [!NOTE]

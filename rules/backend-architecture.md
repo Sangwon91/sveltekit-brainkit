@@ -17,7 +17,7 @@ description: "Backend Architecture Rules - Python FastAPI with TDD and Vertical 
 - **Workspace**: `uv` monorepo. `apps/` (glue code) vs `domains/` (business logic) vs `packages/` (pure logic).
 - **Architecture**: Vertical Slices. Group by feature, not layer.
 - **Testing**: Test-First is mandatory. Unit tests for packages, Integration tests for apps.
-- **Data**: `SQLModel` for DB entities. Pydantic V2 for DTOs.
+- **Data**: Pydantic V2 for domain types and DTOs. Pure SQL preferred.
 - **Typing**: Use `Protocol` for decoupling. Avoid `ABC`.
 
 ```mermaid
@@ -32,7 +32,7 @@ graph TD
 - **Language**: Python 3.12+
 - **Package Manager**: `uv`
 - **Framework**: FastAPI
-- **Database**: SQLModel (SQLAlchemy + Pydantic)
+- **Database**: Pure SQL (or SQLAlchemy Core) preferred over ORM
 - **Testing**: Pytest
 
 ## 4. Workflow
@@ -71,8 +71,10 @@ backend/
 ├── uv.lock
 ├── domains/                    # [Business Domain]
 │   └── {domain-name}/
-│       ├── types.py            # Value Objects, Entities, Function Types
-│       └── workflows.py        # Pure domain functions
+│       ├── pyproject.toml
+│       └── src/{domain_name}/
+│           ├── types.py        # Value Objects, Entities, Function Types
+│           └── workflows.py    # Pure domain functions
 │
 ├── apps/
 │   ├── api/                    # [Thin HTTP Adapter]
@@ -131,8 +133,8 @@ Extract code to `packages/` if it is:
 
 ### Data Modeling & Database
 
-- **SQLModel**: Use `SQLModel` for entities if DTO/ORM mapping becomes verbose. It combines Pydantic and SQLAlchemy, reducing boilerplate.
-- **Pragmatism**: Do not force separate Pydantic DTOs for every layer if they are identical. `SQLModel` instances can serve as both DB models and API responses in simple slices.
+- **Pure SQL Preferred**: Direct SQL queries are most transparent and align with Functional DDD's explicit data flow.
+- **Domain Models**: Use Pydantic with `frozen=True` for immutable domain types. Keep DB concerns separate from domain.
 
 ---
 
