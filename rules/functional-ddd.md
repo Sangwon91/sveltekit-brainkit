@@ -77,10 +77,11 @@ domains/
 
 ```text
 packages/
-├── {lib-name}/
-│   ├── core.py          # Pure algorithms
-│   └── utils.py         # Helper functions
-└── ...
+└── {lib-name}/
+    ├── pyproject.toml
+    └── src/{lib_name}/
+        ├── core.py          # Pure algorithms
+        └── utils.py         # Helper functions
 ```
 
 > [!IMPORTANT]
@@ -95,17 +96,20 @@ packages/
 
 ```text
 apps/
-├── api/                     # ★ Thin HTTP Adapter
-│   └── features/
-│       └── {feature}/
-│           ├── router.py    # HTTP → UseCase → HTTP (얇게!)
-│           └── dtos.py      # API-specific Request/Response
-├── usecases/                # ★ 공유 가능한 오케스트레이션
+├── api/                         # [Thin HTTP Adapter]
+│   ├── pyproject.toml
+│   └── src/api/
+│       ├── main.py
+│       └── features/
+│           └── {feature}/
+│               ├── router.py    # HTTP → UseCase → HTTP
+│               └── dtos.py      # Request/Response schemas
+├── usecases/                    # [Shared Orchestration]
 │   └── {feature}/
-│       ├── service.py       # Use Case / Orchestration
-│       └── adapters.py      # Function Type 구현체
-├── infrastructure/          # DB, External Services (앱 간 공유)
-└── shared/                  # 공통 의존성
+│       ├── service.py           # Use Case / Flow
+│       └── adapters.py          # Function Type 구현체
+├── infrastructure/              # DB, External Services
+└── tests/                       # Integration Tests
 ```
 
 > [!NOTE]
